@@ -492,13 +492,24 @@ class TaobaoClimber:
                                     self.get_messge()
                     except:
                         pass
+    def save_cookie(self, cookie_name):
+        self.driver.get(self.shop_home)
+        cookies = self.driver.get_cookies()
+        with open(cookie_name, "w") as fp:
+            json.dump(cookies, fp)
+    def add_cookie(self, cookie_name):
+        with open(cookie_name, "r") as fp:
+            cookies = json.load(fp)
+            for cookie in cookies:
+                # cookie.pop('domain')  # 如果报domain无效的错误
+                climber.driver.add_cookie(cookie)
 if __name__ == '__main__':
     # 初始化
-    chrome_options = webdriver.ChromeOptions()
     #chrome_options = webdriver.FirefoxOptions()
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
+    chrome_options = webdriver.ChromeOptions()
+    #chrome_options.add_argument('--no-sandbox')
+    #chrome_options.add_argument('--headless')
+    #chrome_options.add_argument('--disable-gpu')
     conn = sqlite3.connect('msg_user.db')
     sql_user = conn.cursor()
     
@@ -532,29 +543,16 @@ if __name__ == '__main__':
     TaobaoClimber.action = ActionChains(TaobaoClimber.driver)
     TaobaoClimber.driver.maximize_window()  # 浏览器最大化
     #TaobaoClimber.driver.execute_script("window.open('')")
+    print(u"开始")
     TaobaoClimber.shop_home = "https://shop150536661.taobao.com/shop/view_shop.htm?spm=a211vu.server-web-home.category.d53.64f02d583cnC94&mytmenu=mdianpu&user_number_id=2291133898"
-    #climber.shelve()
-    climber.driver.get(climber.shop_home)
-    with open("cookies.txt", "r") as fp:
-        cookies = json.load(fp)
-        for cookie in cookies:
-            # cookie.pop('domain')  # 如果报domain无效的错误
-            climber.driver.add_cookie(cookie)
+    climber.shelve()
+    climber.save_cookie("shop_cookie")
     climber.driver.get(climber.shop_home)
     climber.webww_login()
-    while True:
-        climber.get_msg()
-        time.sleep(0.5)
-        climber.send_msg()
-        with open("cookies.txt", "w") as fp:
-            json.dump(cookies, fp)
-        time.sleep(0.5)
-    #cookies = climber.driver.get_cookies()
-    '''while True:
-        # 循环爬取订单
-        orders = climber.climb()
-        for order in orders:
-            print("淘宝订单产生：订单号：%s\t订单日期：%s \t买家：%s\t备注：%s" % order)
-        # 每30秒抓一次
-        time.sleep(30)
-	'''
+    climber.get_msg()
+    time.sleep(0.5)
+    climber.send_msg()
+    time.sleep(0.5)
+    climber.save_cookie("shop_cookie")
+
+
