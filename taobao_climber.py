@@ -26,7 +26,7 @@ sys.setdefaultencoding('utf8')
 #reload(sys)
 #sys.setdefaultencoding('utf8')
 class TaobaoClimber:
-    def __init__(self, nickname="风筝雷尔"):
+    def __init__(self, nickname="风筝雷尔",son_nickname="5oo0o0o5"):
         self.__session = requests.Session()
         #self.__username = username
         #self.__password = password
@@ -36,6 +36,7 @@ class TaobaoClimber:
         self.action = None
         self.shop_home=""
         self.nickname=nickname
+        self.son_nickname = son_nickname
     # 是否登录
     __is_logined = False
 
@@ -60,118 +61,75 @@ class TaobaoClimber:
     # requests会话
     __session = None
 
-    def __login(self):
+    def __login(self,web_drver):
 
         # 1.登陆
         try:
-            self.driver.get(self.__login_url)
+            web_drver.get(self.__login_url)
         except exceptions.TimeoutException:  # 当页面加载时间超过设定时间，JS来停止加载
             
-            self.driver.execute_script('window.stop()')
+            web_drver.execute_script('window.stop()')
 
         count = 0
         while count < 5:  # 重试5次
             count += 1
-            if self.__login_one() is True:
+            if self.__login_one(web_drver) is True:
                 break
         if count == 5:
             return False
 
         # 2.保存cookies
         # driver.switch_to_default_content() #需要返回主页面，不然获取的cookies不是登陆后cookies
-        list_cookies = self.driver.get_cookies()
+        list_cookies = web_drver.get_cookies()
         cookies = {}
         for s in list_cookies:
             cookies[s['name']] = s['value']
             requests.utils.add_dict_to_cookiejar(self.__session.cookies, cookies)  # 将获取的cookies设置到session
         return True
 
-    def __login_one(self):
-        '''try:
-            # 1.点击密码登录，切换到密码登录模式 默认是二维码登录
-            username_login_btn = self.driver.find_element_by_xpath("//a[@class='forget-pwd J_Quick2Static']")
-            if username_login_btn.is_displayed() is True:
-                username_login_btn.click()
-        except exceptions.ElementNotInteractableException:
-            pass
-
-        # 2.获取账户、密码输入框
-        username_input = self.driver.find_element_by_id("TPL_username_1")
-        password_input = self.driver.find_element_by_id("TPL_password_1")
-        # 3.为账户、密码赋值
-        username_input.clear()
-        username_input.send_keys(self.__username)
-        password_input.send_keys(self.__password)
-        self.driver.find_element_by_id("J_Quick2Static").click()
-        '''
-        # 4.滑块判断
-        #self.__slide_login()
-
-        # 5.获取登陆按钮，并点击登录
-        #submit_btn = self.driver.find_element_by_id("J_SubmitStatic")
-        #submit_btn.click()
+    def __login_one(self,web_drver):
         while True:
-            QRCodeImg = self.driver.find_element_by_id("J_QRCodeImg")
+            QRCodeImg = sweb_drver.find_element_by_id("J_QRCodeImg")
             if QRCodeImg.is_displayed() is False:
                 continue
             else:
                 break
         QRCodeImg_src = QRCodeImg.find_element_by_tag_name("img")
         print (QRCodeImg_src.get_attribute("src"))
-        QRCodeImg_err = self.driver.find_elements_by_class_name("msg_err")
-        QRCodeImg_err_text = self.driver.find_element_by_xpath("// *[ @id='J_QRCodeLogin']/div[3]/div[1]/div[3]/h6").text
+        QRCodeImg_err = web_drver.find_elements_by_class_name("msg_err")
+        QRCodeImg_err_text = web_drver.find_element_by_xpath("// *[ @id='J_QRCodeLogin']/div[3]/div[1]/div[3]/h6").text
         print (QRCodeImg_err_text)
         if (QRCodeImg_err_text == u"二维码已失效"):
             print("需要刷新")
         # 6.根据提示判断是否登录成功
         count = 0
         while True:
-            url  = self.driver.current_url
+            url  = web_drver.current_url
             if url == "https://www.taobao.com/" or url=="https://world.taobao.com/":
                 print (u"登录 成功！")
                 break
             elif url !="https://login.taobao.com/member/login.jhtml":
-                iframe = self.driver.find_elements_by_tag_name("iframe")[0]
-                self.driver.switch_to_frame(iframe)
+                iframe = web_drver.find_elements_by_tag_name("iframe")[0]
+                web_drver.switch_to_frame(iframe)
                 print(url)
                 while True:
                     try:
-                        btn = self.driver.find_element_by_xpath("//*[@id='J_Phone']/ul/li[3]/input[1]")
+                        btn = web_drver.find_element_by_xpath("//*[@id='J_Phone']/ul/li[3]/input[1]")
                         break
                     except:
                         pass
 
                 btn.click()
                 code = input("输入验证码:\n")
-                m_input = self.driver.find_element_by_xpath("//*[@id='J_Phone']/ul/li[5]/input")
+                m_input = web_drver.find_element_by_xpath("//*[@id='J_Phone']/ul/li[5]/input")
                 m_input.click()
                 m_input.send_keys(code)
-                self.driver.find_element_by_xpath("//*[@id='J_FooterSubmitBtn']").click()
+                web_drver.find_element_by_xpath("//*[@id='J_FooterSubmitBtn']").click()
             time.sleep(5)
             count += 1
             if (count > 12 * 5):
                 print (u"登录超时")
                 return False
-
-
-        '''
-        try:
-            message = self.driver.find_element_by_id("J_Message").find_element_by_class_name("error")
-            if message.text == u"为了你的账户安全，请拖动滑块完成验证":
-                self.driver.execute_script(
-                    "document.getElementById('J_Message').children[1].innerText='发货机器人：请滑动滑块，协助完成验证！';")
-                return False
-        except exceptions.NoSuchElementException:
-            pass
-
-        # 7.有时检测当前环境是否异常，此时休眠一段时间让它检测
-        while True:
-            try:
-                self.driver.find_element_by_id("J_SiteNav")
-                break
-            except exceptions.NoSuchElementException:
-                time.sleep(1)
-	'''
         return True
 
     def __slide_login(self):
@@ -269,18 +227,17 @@ class TaobaoClimber:
         except:
             return False
 
-    def shelve(self):
+    def shelve(self,web_drver):
         # 切换回淘宝窗口
         try:
-            self.driver.switch_to_window(self.driver.window_handles[0])
+            web_drver.switch_to_window(web_drver.window_handles[0])
         except exceptions:
             print (exceptions)
 
-        if self.__is_logined is False:
-            if self.__login() is False:
-                return False
-            else:
-                self.__is_logined = True
+        if self.__login(web_drver) is False:
+            return False
+        else:
+            self.__is_logined = True
     def delivered(self, orderId):
         # 切换回淘宝窗口
         self.driver.switch_to_window(self.driver.window_handles[0])
@@ -318,10 +275,10 @@ class TaobaoClimber:
         except exceptions.NoSuchElementException:
             return False
 
-    def webww_login(self):
+    def webww_login(self, web_drver):
             try:
-                    WebDriverWait(self.driver, 20, 0.1).until(lambda x: x.find_element_by_xpath("//*[@id='tstart-plugin-tdog']"))
-                    webww_base = self.driver.find_element_by_xpath("//*[@id='tstart-plugin-tdog']")
+                    WebDriverWait(web_drver, 20, 0.1).until(lambda x: x.find_element_by_xpath("//*[@id='tstart-plugin-tdog']"))
+                    webww_base = web_drver.find_element_by_xpath("//*[@id='tstart-plugin-tdog']")
                     webww_base.click()
                     #print(u"点击旺旺图标")
             except Exception:
@@ -330,18 +287,18 @@ class TaobaoClimber:
                 return
             
             js = "window.scrollTo(document.body.scrollWidth,document.body.scrollHeight)" 
-            self.driver.execute_script(js)
+            web_drver.execute_script(js)
             #self.driver.execute_script("arguments[0].click()",webww_base)
             try:
-                    WebDriverWait(self.driver, 2, 0.1).until(lambda x: x.find_elements_by_class_name("use-webww-btn"))
-                    select_ww = self.driver.find_elements_by_class_name("use-webww-btn")
+                    WebDriverWait(web_drver, 2, 0.1).until(lambda x: x.find_elements_by_class_name("use-webww-btn"))
+                    select_ww = web_drver.find_elements_by_class_name("use-webww-btn")
                     for select in select_ww:
                         if select.text == u"继续使用网页版":
                             if select.is_displayed() is True:
                                 self.action.click(select).perform()
                     try:
-                            WebDriverWait(self.driver, 2, 0.1).until(lambda x: x.find_elements_by_class_name("tstart-item-tips-btn"))
-                            confirm = self.driver.find_elements_by_class_name("tstart-item-tips-btn")
+                            WebDriverWait(web_drver, 2, 0.1).until(lambda x: x.find_elements_by_class_name("tstart-item-tips-btn"))
+                            confirm = web_drver.find_elements_by_class_name("tstart-item-tips-btn")
                             if confirm[0].is_displayed():
                                     if confirm[0].text == u"确定":
                                          confirm[0].click()
@@ -376,24 +333,25 @@ class TaobaoClimber:
                 for recentlist in recentlists:
                     item = recentlist.find_element_by_class_name("tdog-user-name")
                     item_name = item.text
-                    if item_name == user
+                    if item_name == user:
                         if item.is_displayed():
                             recentlist.click()
                             time.sleep(0.1)
+                            break
                     else:
-                                return
+                        continue
                         #找到当前打开的发送窗口
-                        messg_winds = self.driver.find_elements_by_class_name("tdog-popup")
-                        for user_wind in messg_winds:
-                            #谁是可见的就是 刚刚打开的发送窗口/html/body/div[6]/div[2]/div[2]/div[1]/div/div[1]/div[4]
-                            if user_wind.is_displayed():
-                                input_block = user_wind.find_element_by_class_name("tdog-popup-talkinput")
-                                m_input = input_block.find_element_by_xpath("//textarea")
-                                m_input.click()
-                                time.sleep(0.1)
-                                m_input.send_keys(msg)
-                                user_wind.find_element_by_class_name("tdog-popup-send").click()
-                                time.sleep(0.1)
+                messg_winds = self.driver.find_elements_by_class_name("tdog-popup")
+                for user_wind in messg_winds:
+                    #谁是可见的就是 刚刚打开的发送窗口/html/body/div[6]/div[2]/div[2]/div[1]/div/div[1]/div[4]
+                    if user_wind.is_displayed():
+                        input_block = user_wind.find_element_by_class_name("tdog-popup-talkinput")
+                        m_input = input_block.find_element_by_xpath("//textarea")
+                        m_input.click()
+                        time.sleep(0.1)
+                        m_input.send_keys(msg)
+                        user_wind.find_element_by_class_name("tdog-popup-send").click()
+                        time.sleep(0.1)
                 break
             except Exception:
                 print(traceback.print_exc())
@@ -403,8 +361,12 @@ class TaobaoClimber:
 
     def get_up_shop(self,shop_url):
         self.son_driver.get(shop_url)
-        
-    def get_messge(self, shop_son):
+        up_link = self.son_driver.find_element_by_xpath("//*[@id='J_DivItemDesc']/div[1]/a").get_attribute("href")
+        self.son_driver.get(up_link)
+        self.son_driver.find_element_by_class_name("ww-inline ww-online").click()
+        up_name = self.son_driver.find_element_by_class_name("tdog-userinfo-username").text
+        return up_link,up_name
+    def get_messge(self):
         global sql_user
         global conn
         messg_winds = self.driver.find_elements_by_class_name("tdog-popup")
@@ -440,7 +402,7 @@ class TaobaoClimber:
                                 up_link, up_name = self.get_up_shop(link[0])
                                 sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
                                                 values ('%s','%s','%s','%s',%s,'%s','%s')" % (
-                                                now_name, now_time, now_msg, 1, 1, up_name ，up_link))
+                                                now_name, now_time, now_msg, 1, 1, up_name ,up_link))
                                 conn.commit()
                                 self.send_msg_direct(user[i].text,u"有什么可以帮您呢？")
                                 continue
@@ -453,7 +415,7 @@ class TaobaoClimber:
                                 up_link, up_name = self.get_up_shop(link[0]) 
                                 sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
                                                 values ('%s','%s','%s','%s',%s,'%s','%s')" % (
-                                                now_name, now_time, now_msg, 1, 1, up_name ，up_link))
+                                                now_name, now_time, now_msg, 1, 1, up_name ,up_link))
                                 conn.commit()
                                 self.send_msg_direct(user[i].text,u"有什么可以帮您呢？")
                                 continue
@@ -472,7 +434,7 @@ class TaobaoClimber:
                                     if user_line[0][5] == 0:
                                         sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
                                                 values ('%s','%s','%s','%s',%s,'%s','%s')" % (
-                                                now_name, now_time, now_msg, 1, 1, 0 0))
+                                                now_name, now_time, now_msg, 1, 1, 0 ,0))
                                         conn.commit()
                                         self.send_msg_direct(user[i].text,u"亲，把商品链接发下哦，不知道是哪件商品呢！")
                                         continue
@@ -588,16 +550,16 @@ class TaobaoClimber:
             for cookie in cookies:
                 # cookie.pop('domain')  # 如果报domain无效的错误
                 climber.driver.add_cookie(cookie)
-    def ww_cookie(self,cookie_name):
+    def ww_cookie(self,cookie_name,web_drver):
         self.shelve()
-        self.driver.get(self.shop_home)
-        self.webww_login()
+        web_drver.get(self.shop_home)
+        self.webww_login(web_drver)
         self.get_msg()
         time.sleep(0.5)
         self.send_msg()
         time.sleep(0.5)
         self.save_cookie(cookie_name)
-        self.driver.quit() 
+        web_drver.quit() 
 if __name__ == '__main__':
     # 初始化
     #chrome_options = webdriver.FirefoxOptions()
@@ -642,17 +604,16 @@ if __name__ == '__main__':
     sql_user = conn.cursor()
     climber = TaobaoClimber("风筝雷尔")
     climber.driver = webdriver.Chrome(options = chrome_options)
+    climber.son_driver = webdriver.Chrome(options = chrome_options)
     climber.action = ActionChains(climber.driver)
     climber.driver.maximize_window()  # 浏览器最大化
+    climber.son_driver.maximize_window()
     climber.shop_home = "https://shop150536661.taobao.com/shop/view_shop.htm?spm=a211vu.server-web-home.category.d53.64f02d583cnC94&mytmenu=mdianpu&user_number_id=2291133898"
-    climber.ww_cookie("shop_cookie")
+    climber.shelve(climber.driver)
+    climber.shelve(climber.son_driver)
     #小号cookie生成
-    climber1 = TaobaoClimber("5oo0o0o5")
-    climber1.driver = webdriver.Chrome(options = chrome_options)
-    climber1.action = ActionChains(climber1.driver)
-    climber1.driver.maximize_window()  # 浏览器最大化
-    climber1.shop_home = "https://shop150536661.taobao.com/shop/view_shop.htm?spm=a211vu.server-web-home.category.d53.64f02d583cnC94&mytmenu=mdianpu&user_number_id=2291133898"
-    climber1.ww_cookie("little_cookie")
+    climber.ww_cookie("shop_cookie",climber.driver)
+    climber.ww_cookie("son_cookie",climber.son_driver)
     
     
     
