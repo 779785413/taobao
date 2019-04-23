@@ -89,7 +89,7 @@ class TaobaoClimber:
 
     def __login_one(self,web_drver):
         while True:
-            QRCodeImg = sweb_drver.find_element_by_id("J_QRCodeImg")
+            QRCodeImg = web_drver.find_element_by_id("J_QRCodeImg")
             if QRCodeImg.is_displayed() is False:
                 continue
             else:
@@ -276,6 +276,7 @@ class TaobaoClimber:
             return False
 
     def webww_login(self, web_drver):
+            web_drver.get(self.shop_home)
             try:
                     WebDriverWait(web_drver, 20, 0.1).until(lambda x: x.find_element_by_xpath("//*[@id='tstart-plugin-tdog']"))
                     webww_base = web_drver.find_element_by_xpath("//*[@id='tstart-plugin-tdog']")
@@ -551,7 +552,7 @@ class TaobaoClimber:
                 # cookie.pop('domain')  # 如果报domain无效的错误
                 climber.driver.add_cookie(cookie)
     def ww_cookie(self,cookie_name,web_drver):
-        self.shelve()
+        #self.shelve()
         web_drver.get(self.shop_home)
         self.webww_login(web_drver)
         self.get_msg()
@@ -610,6 +611,8 @@ if __name__ == '__main__':
     climber.son_driver.maximize_window()
     climber.shop_home = "https://shop150536661.taobao.com/shop/view_shop.htm?spm=a211vu.server-web-home.category.d53.64f02d583cnC94&mytmenu=mdianpu&user_number_id=2291133898"
     climber.shelve(climber.driver)
+    climber.webww_login(climber.driver)
+    climber.get_msg()
     climber.shelve(climber.son_driver)
     #小号cookie生成
     climber.ww_cookie("shop_cookie",climber.driver)
