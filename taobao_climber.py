@@ -324,6 +324,7 @@ class TaobaoClimber:
             if user_wind.is_displayed():
                 now_msg_flag = 1
         if now_msg_flag == 1:
+            pass
             self.get_messge()
             #递归调用，直到点击旺旺图标后，没有新消息
             self.send_msg_direct(user,msg)
@@ -336,10 +337,13 @@ class TaobaoClimber:
                     item_name = item.text
                     if item_name == user:
                         if item.is_displayed():
+                            print sys._getframe().f_lineno
                             recentlist.click()
                             time.sleep(0.1)
                             break
                     else:
+                        print ("item_user",item_name)
+                        print sys._getframe().f_lineno
                         continue
                         #找到当前打开的发送窗口
                 messg_winds = self.driver.find_elements_by_class_name("tdog-popup")
@@ -353,6 +357,8 @@ class TaobaoClimber:
                         m_input.send_keys(msg)
                         user_wind.find_element_by_class_name("tdog-popup-send").click()
                         time.sleep(0.1)
+                        user_wind.find_element_by_class_name("tdog-popup-close").click
+
                 break
             except Exception:
                 print(traceback.print_exc())
@@ -371,108 +377,120 @@ class TaobaoClimber:
         global sql_user
         global conn
         messg_winds = self.driver.find_elements_by_class_name("tdog-popup")
-        now_msg_flag = 0
         for user_wind in messg_winds:
-            try:
-                if user_wind.is_displayed():
-                    now_msg_flag = 1
+            if user_wind.is_displayed():
+                try:
+                    print sys._getframe().f_lineno
                     user = user_wind.find_elements_by_class_name("tdog-talk-username")
                     msg = user_wind.find_elements_by_class_name("tdog-talk-content")
                     msg_time = user_wind.find_elements_by_class_name("tdog-talk-time")
-
-                    for i in range(0, len(user), 1):
-                        try:
-                            now_msg = msg[i].text
-                            now_time = msg_time[i].text
-                            now_name = user[i].text
-                        except Exception:
-                            print(traceback.print_exc())
-                            item_name_element = user_wind.find_element_by_class_name("tdog-popup-contact")
-                            item_name = item_name_element.text
-                            self.driver.find_element_by_xpath("//*[@id='tstart-plugin-tdog']").click()
-                            try:
-                                WebDriverWait(self.driver, 10).until(lambda x: x.find_element_by_class_name("tdog-recentlist"))
-                                recentlist = self.driver.find_element_by_class_name("tdog-recentlist")
-                            except:
-                                print(traceback.print_exc())
-                            try:
-                                items = recentlist.find_elements_by_class_name("tdog-recentlist-item")
-                            except:
-                                print(traceback.print_exc())
-                                return
-                            for item in items:
-                                item_user = item.find_element_by_class_name("tdog-user-name").text
-                                if item_name == item_user:
-                                    item.click()
-                                    self.get_messge()
-                        msg_exist = 0
-                        if user[i].text != self.nickname:
-                            if user[i].text=='':
+                except Exception:
+                    print ("no msg ,need try again")
+                    print(traceback.print_exc())
+                    user_wind.find_element_by_class_name("tdog-popup-close").click
+                    item_name_element = user_wind.find_element_by_class_name("tdog-popup-contact")
+                    item_name = item_name_element.text
+                    self.driver.find_element_by_xpath("//*[@id='tstart-plugin-tdog']").click()
+                    try:
+                        WebDriverWait(self.driver, 10).until(lambda x: x.find_element_by_class_name("tdog-recentlist"))
+                        recentlist = self.driver.find_element_by_class_name("tdog-recentlist")
+                    except:
+                        print(traceback.print_exc())
+                    try:
+                        items = recentlist.find_elements_by_class_name("tdog-recentlist-item")
+                    except:
+                        print(traceback.print_exc())
+                        return
+                    for item in items:
+                        item_user = item.find_element_by_class_name("tdog-user-name").text
+                        print ("item_user",item_user)
+                        if item_name == item_user:
+                            item.click()
+                            self.get_messge()
+                for i in range(0, len(user), 1):
+                    now_msg = msg[i].text
+                    now_time = msg_time[i].text
+                    now_name = user[i].text
+                    msg_exist = 0
+                    if user[i].text != self.nickname:
+                        if user[i].text=='':
+                            print sys._getframe().f_lineno
+                            continue
+                        sql_user.execute("select * from user where name='%s'" % (user[i].text))
+                        user_line = sql_user.fetchall()
+                        #表中还没有这个客户时直接询问商品链接
+                        if len(user_line) == 0:
+                            #查看答复中是否有链接
+                            link = re.findall(r'http(.*?)id=(\d*)',now_msg)
+                            if len(link) == 0:
+                                sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
+                                                values ('%s','%s','%s','%s',%s,'%s','%s')" % (
+                                                now_name, now_time, now_msg, 1, 1, 0, 0))
+                                conn.commit()
+                                c = user[i].text
+                                #user_wind.find_element_by_class_name("tdog-popup-close").click()
+                                self.send_msg_direct(c,u"亲，把商品链接发下哦，不知道是哪件商品呢！")
+                                #continue还是break呢这个地方有点问题
                                 continue
-                            sql_user.execute("select * from user where name='%s'" % (user[i].text))
-                            user_line = sql_user.fetchall()
-                            #表中还没有这个客户时直接询问商品链接
-                            if len(user_line) == 0:
-                                #查看答复中是否有链接
-                                link = re.findall(r'http(.*?)id=(\d*)',now_msg)
-                                if len(link) == 0:
-                                    sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
-                                                    values ('%s','%s','%s','%s',%s,'%s','%s')" % (
-                                                    now_name, now_time, now_msg, 1, 1, 0, 0))
-                                    conn.commit()
-                                    self.send_msg_direct(user[i].text,u"亲，把商品链接发下哦，不知道是哪件商品呢！")
-                                    continue
-                                else:
-                                    up_link, up_name = self.get_up_shop(link[0])
-                                    sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
-                                                    values ('%s','%s','%s','%s',%s,'%s','%s')" % (
-                                                    now_name, now_time, now_msg, 1, 1, up_name ,up_link))
-                                    conn.commit()
-                                    self.send_msg_direct(user[i].text,u"有什么可以帮您呢？")
-                                    continue
-                                    pass
-                            #表中有用户名了
                             else:
-                                link = re.findall(r'http(.*?)id=(\d*)',now_msg)
-                                #消息中有商品链接
-                                if len(link) != 0:
-                                    up_link, up_name = self.get_up_shop(link[0])
-                                    sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
-                                                    values ('%s','%s','%s','%s',%s,'%s','%s')" % (
-                                                    now_name, now_time, now_msg, 1, 1, up_name ,up_link))
-                                    conn.commit()
-                                    self.send_msg_direct(user[i].text,u"有什么可以帮您呢？")
-                                    continue
-                                else:
-                                    #消息为普通消息
-                                    sql_user.execute("select * from user where name='%s'" % (user[i].text))
-                                    user_line = sql_user.fetchall()
-                                    for line in user_line:
-                                        #消息存在则标记
-                                        if line[1] == now_time:
-                                            msg_exist = 1
-                                            break
-                                    #消息不存在时则进行下面的
-                                    if msg_exist == 0:
-                                        #如果不存在上家名
-                                        if user_line[len(user_line)-1][6] == '0':
-                                            sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
-                                                    values ('%s','%s','%s','%s',%s,'%s','%s')" % (
-                                                    now_name, now_time, now_msg, 1, 1, 0 ,0))
-                                            conn.commit()
-                                            self.send_msg_direct(user[i].text,u"亲，把商品链接发下哦，不知道是哪件商品呢！")
-                                            continue
-                                        #存在上家名时
-                                        else:
-                                            print ("当前用户：", user[i].text, "消息:", now_msg, "时间:", now_time)
-                                            sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
-                                                                values ('%s','%s','%s','%s',%s,'%s','%s')" % (
-                                            now_name, now_time, now_msg, 0, 0, user_line[0][5], user_line[0][6]))
-                                            conn.commit()
-                    WebDriverWait(self.driver, 1).until(lambda x: x.find_element_by_class_name("tdog-popup-close"))
-                    user_wind.find_element_by_class_name("tdog-popup-close").click()
-            except Exception:
-                print(traceback.print_exc())
+                                up_link, up_name = self.get_up_shop(link[0])
+                                sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
+                                                values ('%s','%s','%s','%s',%s,'%s','%s')" % (
+                                                now_name, now_time, now_msg, 1, 1, up_name ,up_link))
+                                conn.commit()
+                                c = user[i].text
+                                #user_wind.find_element_by_class_name("tdog-popup-close").click()
+                                self.send_msg_direct(c ,u"有什么可以帮您呢？")
+                                continue
+                                pass
+                        #表中有用户名了
+                        else:
+                            link = re.findall(r'http(.*?)id=(\d*)',now_msg)
+                            #消息中有商品链接
+                            if len(link) != 0:
+                                print sys._getframe().f_lineno
+                                up_link, up_name = self.get_up_shop(link[0])
+                                sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
+                                                values ('%s','%s','%s','%s',%s,'%s','%s')" % (
+                                                now_name, now_time, now_msg, 1, 1, up_name ,up_link))
+                                conn.commit()
+                                c = user[i].text
+                                #user_wind.find_element_by_class_name("tdog-popup-close").click()
+                                self.send_msg_direct(c ,u"有什么可以帮您呢？")
+                                continue
+                            else:
+                                #消息为普通消息
+                                sql_user.execute("select * from user where name='%s'" % (user[i].text))
+                                user_line = sql_user.fetchall()
+                                for line in user_line:
+                                    #消息存在则标记
+                                    if line[1] == now_time:
+                                        msg_exist = 1
+                                        break
+                                #消息不存在时则进行下面的
+                                if msg_exist == 0:
+                                    #如果不存在上家名
+                                    print sys._getframe().f_lineno
+                                    if user_line[len(user_line)-1][6] == '0':
+                                        print sys._getframe().f_lineno
+                                        sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
+                                                values ('%s','%s','%s','%s',%s,'%s','%s')" % (
+                                                now_name, now_time, now_msg, 1, 1, 0 ,0))
+                                        conn.commit()
+                                        c = user[i].text
+                                        #user_wind.find_element_by_class_name("tdog-popup-close").click()
+                                        self.send_msg_direct(c ,u"亲，把商品链接发下哦，不知道是哪件商品呢！")
+                                        continue
+                                    #存在上家名时
+                                    else:
+                                        print ("当前用户：", user[i].text, "消息:", now_msg, "时间:", now_time)
+                                        sql_user.execute("insert into user (name,time,msg,send_state,reply_state,shopuser,shoplink)\
+                                                            values ('%s','%s','%s','%s',%s,'%s','%s')" % (
+                                        now_name, now_time, now_msg, 0, 0, user_line[0][5], user_line[0][6]))
+                                        conn.commit()
+                WebDriverWait(self.driver, 1).until(lambda x: x.find_element_by_class_name("tdog-popup-close"))
+                user_wind.find_element_by_class_name("tdog-popup-close").click()
+                time.sleep(0.1)
     def send_msg(self):
         #发送模式
         self.driver.find_element_by_xpath("//*[@id='tstart-plugin-tdog']").click()
@@ -547,14 +565,17 @@ class TaobaoClimber:
             if now_msg_flag == 1:
                 self.get_messge()
             elif now_msg_flag == 0:
+                print sys._getframe().f_lineno
                 try:
                     WebDriverWait(self.driver, 10).until(lambda x: x.find_element_by_class_name("tdog-recentlist"))
                     recentlist = self.driver.find_element_by_class_name("tdog-recentlist")
                 except:
-                        self.driver.get_screenshot_as_file("4.png")
+                    print sys._getframe().f_lineno
+                    self.driver.get_screenshot_as_file("4.png")
                 try:
                     items = recentlist.find_elements_by_class_name("tdog-recentlist-item")
                 except:
+                    print sys._getframe().f_lineno
                     return
                 for item in items:
                     #是否有未读消息
@@ -566,6 +587,7 @@ class TaobaoClimber:
                                 if user_wind.is_displayed():
                                     self.get_messge()
                     except:
+                        print sys._getframe().f_lineno
                         pass
     def save_cookie(self, cookie_name):
         cookies = self.driver.get_cookies()
